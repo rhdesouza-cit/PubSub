@@ -1,9 +1,9 @@
 package com.poc.pubsub.controller;
 
 import com.poc.pubsub.service.PubsubService;
-import com.poc.pubsub.service.PubsubServiceV2;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,39 +12,30 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping
 public class PubsubController {
 
-    private final PubsubService pubSubService;
-    private final PubsubServiceV2 pubsubServiceV2;
+    private final PubsubService pubsubService;
 
-    public PubsubController(PubsubService pubSubService,
-                           PubsubServiceV2 pubsubServiceV2){
-        this.pubSubService = pubSubService;
-        this.pubsubServiceV2 = pubsubServiceV2;
+    public PubsubController(PubsubService pubsubService) {
+        this.pubsubService = pubsubService;
     }
 
     @PostMapping("/createTopic")
     public String createTopic(@RequestParam String topicId) throws Exception {
-//        pubsubServiceV2.createTopicV2(topicId);
-        return pubsubServiceV2.createTopicExample(topicId);
-        //pubSubService.createTopic(topicId);
+        return pubsubService.createTopicExample(topicId);
     }
 
     @PostMapping("/createSubscription")
     public String createSubscription(@RequestParam String subscriptionId, @RequestParam String topicId) throws Exception {
-        return pubsubServiceV2.createSubscriptionWithOrderingExample(topicId, subscriptionId);
+        return pubsubService.createSubscriptionWithOrderingExample(topicId, subscriptionId);
     }
 
     @PostMapping("/publishMessage")
-    public String publishMessage(@RequestParam String topicId, @RequestParam String message) throws Exception {
-        return pubsubServiceV2.publisherMessage(topicId, message);
-
-        //pubSubService.publishMessage(topicId, message);
+    public String publishMessage(@RequestBody String message, @RequestParam String topicId) throws Exception {
+        return pubsubService.publisherMessage(topicId, message);
     }
 
     @GetMapping("/receiveMessages")
-    public void receiveMessages(@RequestParam String subscriptionId) throws Exception {
-        pubsubServiceV2.subscribeAsyncExample(subscriptionId);
-        //pubsubServiceV2.subscribeSyncExample(subscriptionId, 10);
-        //pubSubService.receiveMessages(subscriptionId);
+    public void receiveMessages(@RequestParam String subscriptionId) {
+        pubsubService.subscribeAsyncExample(subscriptionId);
     }
 
 }
