@@ -1,0 +1,18 @@
+spring:
+    devtools:
+        restart:
+            enabled: true
+    application:
+        name: pubsubpoc
+    cloud:
+        gcp:
+            project-id: localstack
+            pubsub:
+                project-id: localstack
+                emulator-host: localhost:8085
+#                topic: topic1
+#                subscriber:
+#                    pull-endpoint: http://localhost:3000/messages
+#                subscription:
+#            credentials:
+#                location: classpath:no_credentials.json
