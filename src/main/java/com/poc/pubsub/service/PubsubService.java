@@ -4,6 +4,7 @@ import com.google.api.core.ApiFuture;
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
+import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
@@ -32,6 +33,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.threeten.bp.Duration;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class PubsubService {
@@ -126,15 +129,16 @@ public class PubsubService {
         }
     }
 
-    public void subscribeAsyncExample(String subscriptionId) {
+    public String subscribeAsyncExample(String subscriptionId) {
         ProjectSubscriptionName subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId);
-
+        final AtomicInteger qtdMessages = new AtomicInteger();
         // Instantiate an asynchronous message receiver.
         MessageReceiver receiver = (PubsubMessage message, AckReplyConsumer consumer) -> {
             // Handle incoming message, then ack the received message.
             System.out.println("Id: " + message.getMessageId());
             System.out.println("Data: " + message.getData().toStringUtf8());
             consumer.ack();
+            qtdMessages.getAndIncrement();
         };
 
         Subscriber subscriber = null;
@@ -152,6 +156,7 @@ public class PubsubService {
             // Shut down the subscriber after 30s. Stop receiving messages.
             subscriber.stopAsync();
         }
+        return String.format("Total de mensagems recebidas do tópico: %s", qtdMessages);
     }
 
     public void subscribeSyncExample(String subscriptionId, Integer numOfMessages) throws IOException {
@@ -197,6 +202,44 @@ public class PubsubService {
             // Use acknowledgeCallable().futureCall to asynchronously perform this operation.
             subscriber.acknowledgeCallable().call(acknowledgeRequest);
             System.out.println(pullResponse.getReceivedMessagesList());
+        }
+    }
+
+    public void receiveMessagesWithDeliveryAttemptsExample(String subscriptionId) {
+
+        ProjectSubscriptionName subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId);
+
+        // Instantiate an asynchronous message receiver.
+        MessageReceiver receiver = new MessageReceiver() {
+            @Override
+            public void receiveMessage(PubsubMessage message, AckReplyConsumer consumer) {
+                try {
+                    // Handle incoming message, then ack the received message.
+                    System.out.println("Id: " + message.getMessageId());
+                    //System.out.println("Data: " + message.getData().toStringUtf8());
+                    //System.out.println("Delivery Attempt: " + Subscriber.getDeliveryAttempt(message));
+                    //consumer.ack();
+                    //Optional.of(null).orElseThrow(() -> new Exception("teste"));
+                } catch (Exception e) {
+                    consumer.nack();
+                }
+            }
+        };
+
+        Subscriber subscriber = null;
+        try {
+            subscriber = Subscriber.newBuilder(subscriptionName, receiver)
+                .setChannelProvider(channelProvider)
+                .setCredentialsProvider(credentialsProvider)
+                .build();
+            // Start the subscriber.
+            subscriber.startAsync().awaitRunning();
+            System.out.printf("Listening for messages on %s:\n", subscriptionName.toString());
+            // Allow the subscriber to run for 30s unless an unrecoverable error occurs.
+            subscriber.awaitTerminated(30, TimeUnit.SECONDS);
+        } catch (TimeoutException timeoutException) {
+            // Shut down the subscriber after 30s. Stop receiving messages.
+            subscriber.stopAsync();
         }
     }
 

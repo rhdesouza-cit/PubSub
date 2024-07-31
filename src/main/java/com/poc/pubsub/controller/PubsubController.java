@@ -1,6 +1,7 @@
 package com.poc.pubsub.controller;
 
 import com.poc.pubsub.service.PubsubService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,8 +35,10 @@ public class PubsubController {
     }
 
     @GetMapping("/receiveMessages")
-    public void receiveMessages(@RequestParam String subscriptionId) {
-        pubsubService.subscribeAsyncExample(subscriptionId);
+    public String receiveMessages(@RequestParam String subscriptionId) {
+        //return pubsubService.subscribeAsyncExample(subscriptionId);
+        pubsubService.receiveMessagesWithDeliveryAttemptsExample(subscriptionId);
+            return null;
     }
 
 }
